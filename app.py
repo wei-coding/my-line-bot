@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header, Request, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Optional
-from pydantic import BaseModel
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -42,7 +42,6 @@ async def callback(request: Request, X_Line_Signature: Optional[str] = Header(No
 
     return 'OK'
 
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     if event.message.text[0] == '!':
@@ -57,6 +56,11 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(text="[系統提示]\n入群訊息設定成功!")
+            )
+        if command == 'test':
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="[系統提示]\n測試成功，系統正常運行!")
             )
 
 @handler.add(JoinEvent)
