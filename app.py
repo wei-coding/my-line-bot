@@ -42,8 +42,11 @@ async def callback(request: Request, X_Line_Signature: Optional[str] = Header(No
 
     return 'OK'
 
+# handle event: please check https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects for all event
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    # command starts with '!'
     if event.message.text[0] == '!':
         command, message = event.message.text.split('_', 1)
         command = command[1:]
@@ -62,6 +65,17 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text="[系統提示]\n測試成功，系統正常運行!")
             )
+        if command == 'help':
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="[系統提示]\n"
+                "!help:顯示此訊息\n"
+                "!join:入群提示設定\n"
+                "!test:測試服務是否正常運行")
+            )
+        # add your commad here
+        # if command == 'some_command':
+        #   do_something_here()
 
 @handler.add(JoinEvent)
 def handle_join(event):
