@@ -15,6 +15,10 @@ from linebot.models.events import MemberJoinedEvent
 
 import os
 import json
+import random
+
+# from load_env import dotenv
+# dotenv.load_env()
 
 app = FastAPI()
 
@@ -38,9 +42,13 @@ async def callback(request: Request, X_Line_Signature: Optional[str] = Header(No
     try:
         handler.handle(body.decode("utf-8"), X_Line_Signature)
     except InvalidSignatureError:
-        raise HTTPException(status_code=400, details="handle body error.")
+        raise HTTPException(status_code=400, detail="handle body error.")
 
     return 'OK'
+
+@app.get("/test")
+async def test(request: Request):
+    return 'Server is running!'
 
 # handle event: please check https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects for all event
 
@@ -48,11 +56,16 @@ async def callback(request: Request, X_Line_Signature: Optional[str] = Header(No
 def handle_message(event):
     # command starts with '!'
     if event.message.text[0] == '!':
-        command, message = event.message.text.split('_', 1)
+        group_id = event.source.group_id
+        try:
+            command, message = event.message.text.split('_', 1)
+        except ValueError:
+            command = event.message.text
+            message = None
         command = command[1:]
         if command == 'join':
             db = json.load(open('db.json', 'r'))
-            db['join'] = message
+            db[group_id] = {'join': message}
             f = open('db.json', 'w')
             json.dump(db, f)
             f.close()
@@ -70,12 +83,29 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text="[系統提示]\n"
                 "!help:顯示此訊息\n"
-                "!join:入群提示設定\n"
+                "!join:入群提示設定，\"_\"後方為入群要顯示的訊息\n"
                 "!test:測試服務是否正常運行")
             )
         # add your commad here
         # if command == 'some_command':
         #   do_something_here()
+    if event.message.text.find("運勢") != -1:
+        subject = event.message.text.split("運勢")[0]
+        rand_num = random.randint(30, 99)
+        def _rand_comment():
+            if rand_num < 50:
+                return "QQ"
+            elif rand_num < 70:
+                return "還不錯喔"
+            elif rand_num < 90:
+                return "真是幸運"
+            else:
+                return "你去買樂透吧!"
+        reply = "{}幸運指數是{}，{}".format(subject, rand_num, _rand_comment())
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply)
+        )
 
 @handler.add(JoinEvent)
 def handle_join(event):
@@ -86,10 +116,11 @@ def handle_join(event):
 
 @handler.add(MemberJoinedEvent)
 def handle_member_join(event):
+    group_id = event.source.group_id
     f = open('db.json', 'r')
     db = json.load(f)
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=db['join'])
+        TextSendMessage(text=db[group_id]['join'])
     )
     f.close()
