@@ -11,7 +11,7 @@
 ## 使用方法
 
 **記得改token和secret，預設是在系統環境變數的`TOKEN`和`SECRET`下**
-**若有`.env`檔案，可以直接`from load_env import dotenv`後`dotenv.load_env()`**
+**若有`.env`檔案，可以直接`import load_env`**
 
 - `\.env`
 ```

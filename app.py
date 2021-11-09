@@ -7,20 +7,27 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, QuickReply, QuickReplyButton, MessageAction
+    MessageEvent, TextMessage, TextSendMessage
 )
 
 import os
-
 import sqlite3
-
 import random
-
-
-from load_env import dotenv
-dotenv.load_env()
+import load_env
+from utils.reward import random_choice, REWARD_LIST
 
 app = Flask(__name__)
+conn = sqlite3.connect("mydb.db")
+c = conn.cursor()
+c.execute("""CREATE TABLE IF NOT EXISTS `customer`(
+    `customer_id` INT PRIMERY KEY,
+    `reward_id` INT,
+    `timestamp` TIMESTAMP DEFAULT (datetime('now', 'localtime')) NOT NULL
+)
+""")
+conn.commit()
+c.close()
+conn.close()
 
 token = os.environ['TOKEN']
 secret = os.environ['SECRET']
@@ -50,7 +57,6 @@ def test():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    is_account = 0
     # command start with "!"
     if event.message.text[0] == '!':
         command = event.message.text.split('!')[-1]
@@ -62,34 +68,18 @@ def handle_message(event):
                 TextSendMessage(text=f"今天運氣指數{lucky}，{hint}")
             )
 
-        if command == '記帳':
-            # TODO
-            is_account = 1
-            text_message = TextSendMessage(text='請選擇分類，或是自行手動輸入',
-                               quick_reply=QuickReply(items=[
-                                   QuickReplyButton(action=MessageAction(label="吃的", text="吃的")),
-                                   QuickReplyButton(action=MessageAction(label="喝的", text="喝的")),
-                                   QuickReplyButton(action=MessageAction(label="用的", text="用的"))
-                               ]))
+        if command == '抽獎':
+            lucky = random_choice()[1]
             line_bot_api.reply_message(
                 event.reply_token,
-                text_message
+                TextSendMessage(text=f"{REWARD_LIST[lucky]}")
             )
-        
-
-        # line_bot_api.reply_message(
-        #     event.reply_token,
-        #     TextSendMessage(text=command)
-        # )
-    if is_account:
-        # TODO
-        if event.message.text == '吃的':
-            None
-        elif event.message.text == '喝的':
-            None
-        elif event.message.text == '用的':
-            None
-        
+            conn = sqlite3.connect("mydb.db")
+            c = conn.cursor()
+            c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, REWARD_LIST.index(lucky)])
+            conn.commit()
+            
+    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
