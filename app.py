@@ -15,6 +15,7 @@ import sqlite3
 import random
 import load_env
 from utils.reward import random_choice, REWARD_LIST
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 conn = sqlite3.connect("mydb.db")
@@ -53,6 +54,18 @@ def callback():
 def test():
     return 'Server is running!'
 
+@app.route('/table')
+def table():
+    conn = sqlite3.connect('mydb.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM `customer`")
+    r = c.fetchall()
+    print(r)
+    r_str = ""
+    for row in r:
+        r_str += f"[{row[2]}]\t<span style=\"color: red\">{row[0]}</span>顧客抽到了<span style=\"color: red;\">{REWARD_LIST[row[1]][0]}<span>\n"
+    return r_str
+
 # handle event: please check https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects for all event
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -69,17 +82,61 @@ def handle_message(event):
             )
 
         if command == '抽獎':
-            lucky = random_choice()[1]
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"{REWARD_LIST[lucky]}")
-            )
             conn = sqlite3.connect("mydb.db")
             c = conn.cursor()
-            c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, REWARD_LIST.index(lucky)])
-            conn.commit()
+            c.execute("SELECT `timestamp` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
+            r = c.fetchone()
+            if r:
+                print(r[0])
+                last_timestamp = datetime.strptime(r[0], '%Y-%m-%d %H:%M:%S')
+                now_timestamp = datetime.now()
+                delta = now_timestamp - last_timestamp
+                if delta.seconds >= 3600:
+                    lucky = random_choice()[1]
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
+                    )
+                    c.execute("INSERT INTO `customer` (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+                    conn.commit()
+                    conn.close()
+                else:
+                    left = timedelta(hours=1) - delta
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"還要再{format_timedelta(left)}才能再抽獎喔!")
+                    )
+            else:
+                lucky = random_choice()[1]
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
+                )
+                c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+                conn.commit()
+                conn.close()
+
             
+def format_timedelta(delta: timedelta) -> str:
+    """Formats a timedelta duration to [N days] %H:%M:%S format"""
+    seconds = int(delta.total_seconds())
+
+    secs_in_a_day = 86400
+    secs_in_a_hour = 3600
+    secs_in_a_min = 60
+
+    days, seconds = divmod(seconds, secs_in_a_day)
+    hours, seconds = divmod(seconds, secs_in_a_hour)
+    minutes, seconds = divmod(seconds, secs_in_a_min)
+
+    time_fmt = f"{hours:02d}小時{minutes:02d}分{seconds:02d}秒"
+
+    if days > 0:
+        suffix = "s" if days > 1 else ""
+        return f"{days} day{suffix} {time_fmt}"
+
+    return time_fmt
     
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000, debug=True)
