@@ -7,15 +7,16 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage
+    MessageEvent, TextMessage, TextSendMessage, JoinEvent, FollowEvent
 )
 
 import os
 import sqlite3
 import random
 import load_env
+from datetime import datetime
 from utils.reward import random_choice, REWARD_LIST
-from datetime import datetime, timedelta
+from utils.util import format_timedelta
 
 app = Flask(__name__)
 conn = sqlite3.connect("mydb.db")
@@ -34,6 +35,8 @@ token = os.environ['TOKEN']
 secret = os.environ['SECRET']
 line_bot_api = LineBotApi(token)
 handler = WebhookHandler(secret)
+
+WAIT_TIME = 3600
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -68,75 +71,106 @@ def table():
 
 # handle event: please check https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects for all event
 
+@handler.add(FollowEvent)
+def handle_join(event):
+    line_bot_api.reply_message(
+        event.reply_token,
+        [
+            TextSendMessage(text="受人之託，忠人之事。我們往生堂性質特殊肩付著雙倍責任，一定會讓兩個世界的人都滿意。"),
+            TextSendMessage(text="往生堂LineBot讓您更方便接收我們的服務及活動資訊！"),
+            TextSendMessage(text="輸入 ”kurumi” 可查看可輸入指令。")
+        ]
+    )
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     # command start with "!"
-    if event.message.text[0] == '!':
-        command = event.message.text.split('!')[-1]
-        if command == '今日運勢':
-            lucky = random.randint(60, 100)
-            hint = "還不錯喔" if lucky >= 80 else "運氣有點差"
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"今天運氣指數{lucky}，{hint}")
-            )
-
-        if command == '抽獎':
-            conn = sqlite3.connect("mydb.db")
-            c = conn.cursor()
-            c.execute("SELECT `timestamp` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
-            r = c.fetchone()
-            if r:
-                print(r[0])
-                last_timestamp = datetime.strptime(r[0], '%Y-%m-%d %H:%M:%S')
-                now_timestamp = datetime.now()
-                delta = now_timestamp - last_timestamp
-                if delta.seconds >= 3600:
-                    lucky = random_choice()[1]
-                    line_bot_api.reply_message(
-                        event.reply_token,
-                        TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
-                    )
-                    c.execute("INSERT INTO `customer` (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
-                    conn.commit()
-                    conn.close()
-                else:
-                    left = timedelta(hours=1) - delta
-                    line_bot_api.reply_message(
-                        event.reply_token,
-                        TextSendMessage(text=f"還要再{format_timedelta(left)}才能再抽獎喔!")
-                    )
-            else:
+    command = event.message.text
+    if command == 'kurumi':
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="往生堂堂主在此聽候差遣，以下為可輸入指令：\n"
+                "限時活動\n"
+                "抽木牌\n"
+                "查看木牌\n"
+                "七七")
+        )
+    elif command == '限時活動':
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="11月4日至12月25日，往生堂提供一日往生體驗服務，全程免費！\n"
+                "帶伴侶來還可以體驗我們的「在天願作比翼鳥」服務！\n"
+                "真的很不錯，歡迎來體驗！")
+        )
+    elif command == '抽木牌':
+        conn = sqlite3.connect("mydb.db")
+        c = conn.cursor()
+        c.execute("SELECT `timestamp` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
+        r = c.fetchone()
+        if r:
+            print(r[0])
+            last_timestamp = datetime.strptime(r[0], '%Y-%m-%d %H:%M:%S')
+            now_timestamp = datetime.now()
+            delta = now_timestamp - last_timestamp
+            if delta.seconds >= 3600:
                 lucky = random_choice()[1]
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
                 )
-                c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+                c.execute("INSERT INTO `customer` (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
                 conn.commit()
                 conn.close()
-
-            
-def format_timedelta(delta: timedelta) -> str:
-    """Formats a timedelta duration to [N days] %H:%M:%S format"""
-    seconds = int(delta.total_seconds())
-
-    secs_in_a_day = 86400
-    secs_in_a_hour = 3600
-    secs_in_a_min = 60
-
-    days, seconds = divmod(seconds, secs_in_a_day)
-    hours, seconds = divmod(seconds, secs_in_a_hour)
-    minutes, seconds = divmod(seconds, secs_in_a_min)
-
-    time_fmt = f"{hours:02d}小時{minutes:02d}分{seconds:02d}秒"
-
-    if days > 0:
-        suffix = "s" if days > 1 else ""
-        return f"{days} day{suffix} {time_fmt}"
-
-    return time_fmt
-    
+            else:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    [
+                        TextSendMessage(text="抽木牌規則，每七天可祈願一次，祈願後，七天後才能再次祈願！"),
+                        TextSendMessage(text="哦呀？哦呀呀？不久前才抽過才對，別這麼急著跨越生死的邊界嘛！"),
+                    ]
+                )
+        else:
+            lucky = random_choice()[1]
+            line_bot_api.reply_message(
+                event.reply_token,
+                [
+                    TextSendMessage(text="抽木牌規則，每七天可祈願一次，祈願後，七天後才能再次祈願！"),
+                    TextSendMessage(text=f"（來看看木牌後面有什麼字吧）\n{REWARD_LIST[lucky][0]}"),
+                ]
+            )
+            c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+            conn.commit()
+            conn.close()
+    elif command == "七七":
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="看到七七了嗎？快告訴我她在哪，我要把她藏起來，嘿！")
+        )
+    elif command == "查看木牌":
+        conn = sqlite3.connect("mydb.db")
+        c = conn.cursor()
+        c.execute("SELECT `reward_id` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
+        r = c.fetchone()
+        if r:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="來看看搜集的木牌有什麼吧！\n"
+                    f"{REWARD_LIST[r[0]][0]}"
+                )
+            )
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="來看看搜集的木牌有什麼吧！\n"
+                    "你還沒有抽過木牌喔~"
+                )
+            )
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="無望坡不是一般人會踏足的地方，是迷路了嗎？有需要的話叫我（kurumi)，我可以為你指路。")
+        )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
