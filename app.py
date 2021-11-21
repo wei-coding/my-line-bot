@@ -11,9 +11,7 @@ from linebot.models import (
 )
 
 import os
-
-from load_env import dotenv
-dotenv.load_env()
+import load_env
 
 app = Flask(__name__)
 
