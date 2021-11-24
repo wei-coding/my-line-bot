@@ -12,11 +12,9 @@ from linebot.models import (
 
 import os
 import sqlite3
-import random
 import load_env
 from datetime import datetime
 from utils.reward import random_choice, REWARD_LIST
-from utils.util import format_timedelta
 
 app = Flask(__name__)
 conn = sqlite3.connect("mydb.db")
@@ -85,7 +83,6 @@ def handle_join(event):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    # command start with "!"
     command = event.message.text
     if command == 'kurumi':
         line_bot_api.reply_message(
