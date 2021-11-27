@@ -15,8 +15,8 @@
 
 - `\.env`
 ```
-TOKEN = "MYTOKEN"
-SECRET = "MYSECRET"
+TOKEN = MYTOKEN
+SECRET = MYSECRET
 ```
 
 ```
