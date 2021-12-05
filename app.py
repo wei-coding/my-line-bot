@@ -19,12 +19,12 @@ from utils.reward import random_choice, REWARD_LIST
 app = Flask(__name__)
 conn = sqlite3.connect("mydb.db")
 c = conn.cursor()
-c.execute("""CREATE TABLE IF NOT EXISTS `customer`(
-    `customer_id` INT PRIMERY KEY,
-    `reward_id` INT,
-    `timestamp` TIMESTAMP DEFAULT (datetime('now', 'localtime')) NOT NULL
-)
+
+# TODO
+c.execute("""CREATE YOUR TABLE HERE!!
 """)
+# TODO
+
 conn.commit()
 c.close()
 conn.close()
@@ -103,7 +103,11 @@ def handle_message(event):
     elif command == '抽木牌':
         conn = sqlite3.connect("mydb.db")
         c = conn.cursor()
-        c.execute("SELECT `timestamp` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
+
+        # TODO
+        c.execute("SELECT YOUR DATA", (event.source.user_id, ))
+        # TODO
+
         r = c.fetchone()
         if r:
             print(r[0])
@@ -116,7 +120,11 @@ def handle_message(event):
                     event.reply_token,
                     TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
                 )
-                c.execute("INSERT INTO `customer` (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+
+                # TODO
+                c.execute("INSERT DATA", [event.source.user_id, lucky])
+                # TODO
+
                 conn.commit()
                 conn.close()
             else:
@@ -136,7 +144,11 @@ def handle_message(event):
                     TextSendMessage(text=f"（來看看木牌後面有什麼字吧）\n{REWARD_LIST[lucky][0]}"),
                 ]
             )
-            c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
+
+            # TODO
+            c.execute("INSERT DATA", [event.source.user_id, lucky])
+            # TODO
+
             conn.commit()
             conn.close()
     elif command.find("七七") != -1:
@@ -147,7 +159,11 @@ def handle_message(event):
     elif command == "查看木牌":
         conn = sqlite3.connect("mydb.db")
         c = conn.cursor()
-        c.execute("SELECT `reward_id` FROM `customer` WHERE `customer_id` = ?", (event.source.user_id, ))
+
+        # TODO
+        c.execute("SELECT YOUR DATA", (event.source.user_id, ))
+        # TODO
+
         r = c.fetchone()
         if r:
             line_bot_api.reply_message(
