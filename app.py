@@ -139,7 +139,7 @@ def handle_message(event):
             c.execute("INSERT INTO customer (customer_id, reward_id) VALUES (?, ?)", [event.source.user_id, lucky])
             conn.commit()
             conn.close()
-    elif command == "七七":
+    elif command.find("七七") != -1:
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="看到七七了嗎？快告訴我她在哪，我要把她藏起來，嘿！")
