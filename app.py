@@ -19,12 +19,12 @@ from utils.reward import random_choice, REWARD_LIST
 app = Flask(__name__)
 conn = sqlite3.connect("mydb.db")
 c = conn.cursor()
-
-# TODO
-c.execute("""CREATE YOUR TABLE HERE!!
+c.execute("""CREATE TABLE IF NOT EXISTS `customer`(
+    `customer_id` INT PRIMERY KEY,
+    `reward_id` INT,
+    `timestamp` TIMESTAMP DEFAULT (datetime('now', 'localtime')) NOT NULL
+)
 """)
-# TODO
-
 conn.commit()
 c.close()
 conn.close()
