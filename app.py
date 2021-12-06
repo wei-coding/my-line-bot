@@ -104,9 +104,9 @@ def handle_message(event):
         conn = sqlite3.connect("mydb.db")
         c = conn.cursor()
 
-        # TODO
+        # TODO 1
         c.execute("SELECT YOUR DATA", (event.source.user_id, ))
-        # TODO
+        # TODO 1
 
         r = c.fetchone()
         if r:
@@ -121,9 +121,9 @@ def handle_message(event):
                     TextSendMessage(text=f"{REWARD_LIST[lucky][0]}")
                 )
 
-                # TODO
+                # TODO 2
                 c.execute("INSERT DATA", [event.source.user_id, lucky])
-                # TODO
+                # TODO 2
 
                 conn.commit()
                 conn.close()
@@ -145,9 +145,9 @@ def handle_message(event):
                 ]
             )
 
-            # TODO
+            # TODO 3
             c.execute("INSERT DATA", [event.source.user_id, lucky])
-            # TODO
+            # TODO 3
 
             conn.commit()
             conn.close()
@@ -160,9 +160,9 @@ def handle_message(event):
         conn = sqlite3.connect("mydb.db")
         c = conn.cursor()
 
-        # TODO
+        # TODO 4
         c.execute("SELECT YOUR DATA", (event.source.user_id, ))
-        # TODO
+        # TODO 4
 
         r = c.fetchone()
         if r:
